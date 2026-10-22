@@ -2,6 +2,8 @@
 
 A full-stack web application for managing users, built with a FastAPI backend and React/Vite frontend, containerized with Docker.
 
+This repository continues [automation-lab](https://github.com/alex-duta/automation-lab) from its version 1.1. It stores the users in a PostgreSQL database instead of a JSON file. automation-lab stays unchanged.
+
 ## Table of Contents
 
 - [Project Overview](#project-overview)
@@ -82,7 +84,7 @@ Install the following dependencies:
 ### Installation
 1. Clone the repository or navigate to the project directory
    ```sh
-   git clone https://github.com/alex-duta/automation-lab.git
+   git clone https://github.com/alex-duta/automation-lab-v2.git
    ```
 
 2. Docker setup is automated using a script: `run_frontend_backend.bat` on Windows, `run_frontend_backend.sh` on Linux and macOS. Both do the same.
@@ -125,7 +127,7 @@ Install the following dependencies:
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/alex-duta/automation-lab.git
+   git clone https://github.com/alex-duta/automation-lab-v2.git
    ```
 2. Navigate to the backend directory
     ```sh
@@ -172,7 +174,7 @@ Install the following dependencies:
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/alex-duta/automation-lab.git
+   git clone https://github.com/alex-duta/automation-lab-v2.git
    ```
 2. Navigate to the frontend directory
     ```sh
@@ -223,9 +225,8 @@ Once the backend is running, access the interactive API documentation at:
 
 ## Notes
 
-- User data is stored in the PostgreSQL database `automation_lab`, in the Docker volume `database-data`; the backend creates its table at startup. `POST /reset` empties it, and `docker compose down -v` deletes the volume
+- User data is stored in the PostgreSQL database `automation_lab`, in the Docker volume `automation-lab-v2_database-data`; the backend creates its table at startup. `POST /reset` empties it, and `docker compose down -v` deletes the volume
 - Profile pictures are stored in `backend/app/storage/profile_pics/`
-- Versions 1.x of the application stored the users in `backend/app/storage/users.json`
 - The project uses:
    - **ESLint** for JavaScript/JSX, usage:
       ```bash

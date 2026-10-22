@@ -19,7 +19,7 @@ Install the following dependencies:
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/alex-duta/automation-lab.git
+   git clone https://github.com/alex-duta/automation-lab-v2.git
    ```
 2. Navigate to the backend directory
     ```sh

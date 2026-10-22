@@ -1,4 +1,4 @@
-version: "3.9"
+name: automation-lab-v2 # fixed project name: the images and the database volume do not depend on the folder name
 
 services:
   frontend:

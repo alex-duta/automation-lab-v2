@@ -5,6 +5,8 @@ This file describes the 17 UI test cases for Automation Playground, independent 
 - Selenium WebDriver (Python): [selenium-python-framework](https://github.com/alex-duta/selenium-python-framework)
 - Playwright (Python): [playwright-python-framework](https://github.com/alex-duta/playwright-python-framework)
 
+Both were written for [automation-lab](https://github.com/alex-duta/automation-lab) 1.x. Their `--reset-app-data` option does not work with this repository; empty the data with `POST /reset` instead.
+
 To compare another framework, language or environment with these two, implement the test cases below and follow the rules in [Implementing the suite](#implementing-the-suite).
 
 ## Overview
@@ -181,4 +183,4 @@ If you write a new implementation, it has to do the following the same way as th
   - Table update: wait until no loading indicator is shown and the table has content, then until the table content has not changed for 150 ms.
   - Filter: wait until every row matches all filters applied so far, or the "No users found" cell is shown, then until the table is stable.
   - Paging and filter reset: wait until the rows change. The loading indicator is often too short to observe, and is not shown at all when paging.
-- **Application data:** empty the user list before each run of the whole suite, so every run starts from the same state: `POST /reset` empties it and deletes the uploaded profile pictures. Both reference implementations do this with the `--reset-app-data` option, which empties `backend/app/storage/users.json`, the storage of versions 1.x of the application; from version 2.0 the users are in a PostgreSQL database, and only `POST /reset` empties it.
+- **Application data:** empty the user list before each run of the whole suite, so every run starts from the same state: `POST /reset` empties it and deletes the uploaded profile pictures.
