@@ -13,6 +13,7 @@ Install the following dependencies:
 
 * Python 3.12+ - https://www.python.org/downloads/
 * pip (installed with Python)
+* Docker Desktop, for the PostgreSQL database - https://www.docker.com/products/docker-desktop/
 
 ### Installation
 
@@ -36,6 +37,14 @@ Install the following dependencies:
    ```
 
 ### Usage
+Start the database container, from the repository root (create the network once, if the setup script has not created it):
+```sh
+docker network create automation-network
+docker compose up -d database
+```
+
+The backend connects to `postgresql+psycopg://automation:automation@localhost:5432/automation_lab` and creates its table at startup; set `DATABASE_URL` to use another database.
+
 Activate virtual environment: 
 ```sh
 venv\Scripts\activate          # Windows
@@ -80,13 +89,14 @@ Use the server at `http://localhost:8000`. You can access the API documentation 
 ├── app
 │   ├── api
 │   │   └── users.py       # user CRUD operations
+│   ├── models
+│   │   └── user_model.py  # users table of the database
 │   ├── schemas
 │   │   └── user_schema.py # user data validation
 │   ├── storage
-│   │   ├── users.json     # store user data
 │   │   └── profile_pics   # store profile pictures
 │   ├── utils
-│   │   └── file_ops.py    # file operations
+│   │   └── database.py    # database connection and sessions
 │   ├── __init__.py
 │   ├── Dockerfile         # containerization
 │   ├── .dockerignore      # docker ignore file

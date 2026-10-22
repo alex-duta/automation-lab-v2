@@ -15,11 +15,11 @@ A full-stack web application for managing users, built with a FastAPI backend an
 
 ## Project Overview
 
-Automation Playground is a user management application that provides a complete system for creating, viewing, and managing user profiles. The application features a modern React frontend and a robust FastAPI backend with file storage for user data and profile pictures.
+Automation Playground is a user management application that provides a complete system for creating, viewing, and managing user profiles. The application features a modern React frontend and a robust FastAPI backend that stores user data in a PostgreSQL database and profile pictures in files.
 
 The UI test cases used with this application, described independently of any automation framework, are in [TEST_CASES.md](TEST_CASES.md).
 
-> **Note:** Automation Playground is a deliberately simple test target for UI test automation. It has no authentication or access control and stores its data in plain files. Do not use it in production or expose it to untrusted networks.
+> **Note:** Automation Playground is a deliberately simple test target for UI test automation. It has no authentication or access control, and its database uses fixed test credentials (`docker-compose.yml`). Do not use it in production or expose it to untrusted networks.
 
 ## Tech Stack
 
@@ -30,6 +30,8 @@ The UI test cases used with this application, described independently of any aut
 - **Pydantic** 2.12.5 - Data validation using Python type annotations (used to ensure data integrity and consistency)
 - **Python Multipart** 0.0.20 - Multipart request handling (used for file uploads)
 - **Email Validator** 2.3.0 - Email validation (used to validate user emails)
+- **SQLModel** 0.0.48 and **SQLAlchemy** 2.1.3 - Database models and queries
+- **psycopg** 3.3.6 - PostgreSQL driver
 <img width="1867" height="577" alt="image" src="https://github.com/user-attachments/assets/5c9801ee-bdf9-418b-962f-52118ad2100d" />
 
 
@@ -42,6 +44,9 @@ The UI test cases used with this application, described independently of any aut
 - **ESLint** - Code quality tool (used to ensure code quality and maintainability)
 <img width="1725" height="962" alt="image" src="https://github.com/user-attachments/assets/e61bc015-4f42-46ec-a144-625462f945d0" />
 
+
+### Database
+- **PostgreSQL** 18.6 - Relational database for user data (Docker image `postgres:18.6-alpine`)
 
 ### Infrastructure
 - **Docker** - Containerization (used to package and deploy applications)
@@ -98,6 +103,7 @@ Install the following dependencies:
    - **Frontend**: http://localhost:3000
    - **Backend API**: http://localhost:8000
    - **API Docs**: http://localhost:8000/docs
+   - **Database**: `localhost:5432`, from this machine only (database `automation_lab`, user and password `automation`)
 
 ## Option 2: Local setup (recommended for development only)
 
@@ -108,6 +114,12 @@ Install the following dependencies:
 
 * Python 3.12+ - https://www.python.org/downloads/
 * pip (installed with Python)
+* Docker Desktop, for the database. Start only the database container from the repository root:
+   ```sh
+   docker network create automation-network    # once, if the setup script has not created it
+   docker compose up -d database
+   ```
+   The backend connects to `postgresql+psycopg://automation:automation@localhost:5432/automation_lab`; set `DATABASE_URL` to use another database.
 
 #### Installation
 
@@ -193,9 +205,9 @@ Once the backend is running, access the interactive API documentation at:
 
 ### Main Endpoints
 
-- `GET /users` - Retrieve all users
+- `GET /users` - Retrieve users: optional `search` (name or e-mail), `role`, `status`, `page` and `size` (both at least 1)
 - `POST /users` - Create a new user
-- `POST /users/{user_id}/upload-profile-pic` - Upload profile picture
+- `POST /users/{user_id}/upload-picture` - Upload profile picture
 - `POST /reset` - Empty the user list and delete the uploaded profile pictures (a test suite calls it before a run)
 
 ## Features
@@ -206,14 +218,14 @@ Once the backend is running, access the interactive API documentation at:
 -  Responsive React UI
 -  Interactive API documentation
 -  Docker containerization
--  File-based data storage
+-  PostgreSQL data storage
 -  RESTful API design
 
 ## Notes
 
-- User data is stored in `storage/users.json`
-- Profile pictures are stored in `storage/profile_pics/`
-- The application uses JSON file storage for simplicity; 
+- User data is stored in the PostgreSQL database `automation_lab`, in the Docker volume `database-data`; the backend creates its table at startup. `POST /reset` empties it, and `docker compose down -v` deletes the volume
+- Profile pictures are stored in `backend/app/storage/profile_pics/`
+- Versions 1.x of the application stored the users in `backend/app/storage/users.json`
 - The project uses:
    - **ESLint** for JavaScript/JSX, usage:
       ```bash

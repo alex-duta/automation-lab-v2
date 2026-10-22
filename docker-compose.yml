@@ -22,11 +22,39 @@ services:
     ports:
       - "8000:8000"
     restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://automation:automation@database:5432/automation_lab
+    depends_on:
+      database:
+        condition: service_healthy # start the backend when the database accepts connections
     networks:
       - automation-network
     volumes:
-      - ./backend/app/storage:/app/app/storage # Persist storage data
+      - ./backend/app/storage:/app/app/storage # Persist the profile pictures
+
+  database:
+    image: postgres:18.6-alpine
+    container_name: database
+    ports:
+      - "127.0.0.1:5432:5432" # only from this machine, for a local run of the backend
+    restart: unless-stopped
+    environment: # credentials of a local test application, not secrets
+      POSTGRES_USER: automation
+      POSTGRES_PASSWORD: automation
+      POSTGRES_DB: automation_lab
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U automation -d automation_lab"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks:
+      - automation-network
+    volumes:
+      - database-data:/var/lib/postgresql # Persist user data (PostgreSQL 18 keeps its data in a folder per version here)
 
 networks:
   automation-network: # create a shared Docker network for communication between containers. This is created when the installation .bat file is run.
     external: true
+
+volumes:
+  database-data:

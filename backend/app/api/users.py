@@ -1,9 +1,13 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Query
 from datetime import datetime
 import uuid
 import os
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, func, or_, select
+from app.models.user_model import UserRecord
 from app.schemas.user_schema import UserCreate
-from app.utils.file_ops import read_users, write_users
+from app.utils.database import get_session
 
 # API Router for user-related endpoints: create user, upload profile picture, list users etc.
 router = APIRouter()
@@ -15,30 +19,32 @@ PROFILE_DIR = "app/storage/profile_pics"
 # POST /users - Create User
 # -------------------------
 @router.post("/users")
-async def create_user(user: UserCreate):
-    data = read_users()
-    users = data["users"]
-
+def create_user(user: UserCreate, session: Session = Depends(get_session)):
     # Check duplicate email
-    if any(u["email"] == user.email for u in users):
+    if session.exec(select(UserRecord).where(UserRecord.email == user.email)).first():
         raise HTTPException(status_code=400, detail="Email already exists")
 
     # Create new user
-    new_user = {
-        "id": str(uuid.uuid4()),
-        "name": user.name,
-        "email": user.email,
-        "role": user.role,
-        "status": user.status,
-        "profile_picture": None,
-        "created_at": datetime.utcnow().isoformat(),
-    }
+    new_user = UserRecord(
+        id=str(uuid.uuid4()),
+        name=user.name,
+        email=user.email,
+        role=user.role,
+        status=user.status,
+        profile_picture=None,
+        created_at=datetime.utcnow().isoformat(),
+    )
+    result = new_user.to_dict()
 
-    # Append and save new user
-    users.append(new_user)
-    write_users(data)
+    # Save new user; the unique e-mail also rejects two requests with the same e-mail at the same time
+    session.add(new_user)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(status_code=400, detail="Email already exists")
 
-    return new_user
+    return result
 
 
 # ---------------------------------------------------
@@ -47,7 +53,12 @@ async def create_user(user: UserCreate):
 # user_id: ID of the user whose picture is being uploaded
 # ---------------------------------------------------
 @router.post("/users/{user_id}/upload-picture")
-async def upload_picture(user_id: str, file: UploadFile = File(...)):
+def upload_picture(user_id: str, file: UploadFile = File(...), session: Session = Depends(get_session)):
+    # Find user
+    user = session.exec(select(UserRecord).where(UserRecord.id == user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     # Ensure storage folder exists
     os.makedirs(PROFILE_DIR, exist_ok=True)
 
@@ -57,70 +68,67 @@ async def upload_picture(user_id: str, file: UploadFile = File(...)):
 
     # Save file
     with open(picture_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+        f.write(file.file.read())
 
-    # Update user record 
-    data = read_users()
-    users = data["users"]
+    # Update user record
+    user.profile_picture = picture_path
+    session.add(user)
+    session.commit()
 
-    # Find user and update profile picture path
-    for u in users:
-        if u["id"] == user_id:
-            u["profile_picture"] = picture_path
-            write_users(data)
-            return {"message": "Picture uploaded"}
-
-    raise HTTPException(status_code=404, detail="User not found")
+    return {"message": "Picture uploaded"}
 
 # ---------------------------------
 # GET /users - List Users
 # Optional query parameters:
 # search: search term for name or email
 # role: filter by user role
-# status: filter by user status  
-# size: number of items per page (default 10)
-# page: page number (default 1)     
+# status: filter by user status
+# size: number of items per page (default 10, at least 1)
+# page: page number (default 1, at least 1)
 # ---------------------------------
 @router.get("/users")
-async def list_users(
+def list_users(
     search: str | None = None,
     role: str | None = None,
     status: str | None = None,
-    page: int = 1,
-    size: int = 10
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1),
+    session: Session = Depends(get_session),
     ):
-    data = read_users()
-    users = data["users"]
+    conditions = []
 
-    #  SEARCH FILTER 
+    #  SEARCH FILTER: the term anywhere in the name or the email, ignoring case
+    #  (strpos and not LIKE, where _ and % in the term would be wildcards)
     if search:
         search_lower = search.lower()
-        users = [
-            u for u in users
-            if search_lower in u["name"].lower()
-            or search_lower in u["email"].lower()
-            ]
+        conditions.append(or_(
+            func.strpos(func.lower(UserRecord.name), search_lower) > 0,
+            func.strpos(func.lower(UserRecord.email), search_lower) > 0,
+        ))
 
-    #  ROLE FILTER 
+    #  ROLE FILTER
     if role:
-        users = [u for u in users if u["role"] == role]
+        conditions.append(UserRecord.role == role)
 
-    #  STATUS FILTER 
+    #  STATUS FILTER
     if status:
-        users = [u for u in users if u["status"] == status]
+        conditions.append(UserRecord.status == status)
 
-    #  PAGINATION: total, page, size, items
-    total = len(users)
-    start = (page - 1) * size
-    end = start + size
-    paginated = users[start:end]
+    #  PAGINATION: total, page, size, items, in the order of creation
+    total = session.exec(select(func.count()).select_from(UserRecord).where(*conditions)).one()
+    paginated = session.exec(
+        select(UserRecord)
+        .where(*conditions)
+        .order_by(UserRecord.seq)
+        .offset((page - 1) * size)
+        .limit(size)
+    ).all()
 
     return {
         "total": total,
         "page": page,
         "size": size,
-        "items": paginated,
+        "items": [u.to_dict() for u in paginated],
     }
 
 
@@ -130,8 +138,9 @@ async def list_users(
 # of a test suite starts from the same state every time.
 # ---------------------------------------------------
 @router.post("/reset")
-async def reset_data():
-    write_users({"users": []})
+def reset_data(session: Session = Depends(get_session)):
+    session.connection().execute(text("TRUNCATE TABLE users RESTART IDENTITY"))
+    session.commit()
 
     # Delete the uploaded profile pictures
     if os.path.isdir(PROFILE_DIR):
