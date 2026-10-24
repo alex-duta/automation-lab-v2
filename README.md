@@ -210,12 +210,29 @@ Once the backend is running, access the interactive API documentation at:
 - `GET /users` - Retrieve users: optional `search` (name or e-mail), `role`, `status`, `page` and `size` (both at least 1)
 - `POST /users` - Create a new user
 - `POST /users/{user_id}/upload-picture` - Upload profile picture
-- `POST /reset` - Empty the user list and delete the uploaded profile pictures (a test suite calls it before a run)
+- `GET /users/{user_id}/profile` - Retrieve the profile of a user (permissions, notifications, phone, language, bio); a user who never saved one has the default profile
+- `PUT /users/{user_id}/profile` - Save the whole profile; 422 for invalid values, or SMS notifications without a phone
+- `GET /teams` - Retrieve the teams with their members, in the order in which they joined
+- `PUT /teams/{team_id}` - Rename a team (`{"name": "..."}`); 400 for a name that another team has
+- `PUT /users/{user_id}/team` - Move a user to a team (`{"team_id": 2}`); a user is in at most one team
+- `DELETE /users/{user_id}/team` - Remove a user from their team
+- `GET /users/export.csv` - Download the users that match the filters of `GET /users` (`search`, `role`, `status`) as a CSV file
+- `POST /reports` - Request a report (`{"type": "by_role" | "by_status", "search": "...", "delay": 3}`): the users that match the search, counted by role or by status; it is ready after `delay` seconds (0 to 10)
+- `GET /reports/{report_id}` - Status of a report: `queued`, `running` (with its `progress` in percent) or `ready`, and its `result` once it is ready
+- `POST /session` - Sign in as the user with this e-mail (`{"email": "..."}`, no password): sets the HTTP-only cookie `session_id`; 404 for an unknown e-mail, 403 for a disabled user
+- `GET /session` - The signed-in user of the session cookie and their preferences (`theme`, `date_format`); 401 when not signed in
+- `PUT /session/preferences` - Save the preferences of the signed-in user (`{"theme": "light" | "dark", "date_format": "iso" | "eu" | "us"}`); 401 when not signed in
+- `DELETE /session` - Sign out: ends the session and deletes the cookie
+- `POST /reset` - Empty the user list, the user profiles and preferences, the teams, the reports and the sessions, create the default teams again (Payments, Growth, Platform) and delete the uploaded profile pictures (a test suite calls it before a run)
 
 ## Features
 
 -  User CRUD operations
 -  Profile picture upload and storage
+-  User profile editing: check boxes, radio buttons, browser form validation, a rich text editor in an iframe
+-  Team board: HTML5 drag and drop, details on hover, double-click to rename, a right-click menu, web components with shadow DOM, browser storage
+-  Export and reports: CSV download, a report whose status changes over time, a printable view in a new tab
+-  Session and preferences: an HTTP-only session cookie, the preferences of the signed-in user, an e-mail remembered in a cookie of the page, tabs in the browser history
 -  Email validation
 -  Responsive React UI
 -  Interactive API documentation
@@ -225,8 +242,9 @@ Once the backend is running, access the interactive API documentation at:
 
 ## Notes
 
-- User data is stored in the PostgreSQL database `automation_lab`, in the Docker volume `automation-lab-v2_database-data`; the backend creates its table at startup. `POST /reset` empties it, and `docker compose down -v` deletes the volume
+- User data is stored in the PostgreSQL database `automation_lab`, in the Docker volume `automation-lab-v2_database-data`; the backend creates its tables at startup. `POST /reset` empties them, and `docker compose down -v` deletes the volume
 - Profile pictures are stored in `backend/app/storage/profile_pics/`
+- The session cookie of the backend reaches the frontend because both run on the same host (`localhost`, ports 3000 and 8000): cookies do not depend on the port. The frontend sends its session requests with credentials, and the backend allows them for the origins in `main.py`
 - The project uses:
    - **ESLint** for JavaScript/JSX, usage:
       ```bash

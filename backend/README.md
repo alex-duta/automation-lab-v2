@@ -88,11 +88,24 @@ Use the server at `http://localhost:8000`. You can access the API documentation 
 .
 ├── app
 │   ├── api
-│   │   └── users.py       # user CRUD operations
+│   │   ├── users.py          # user CRUD operations
+│   │   ├── profiles.py       # user profiles (Edit User page)
+│   │   ├── teams.py          # teams and their members (Team Board page)
+│   │   ├── reports.py        # CSV export and reports (Export & Reports page)
+│   │   └── sessions.py       # session cookie and user preferences (Session & Preferences page)
 │   ├── models
-│   │   └── user_model.py  # users table of the database
+│   │   ├── user_model.py     # users table of the database
+│   │   ├── profile_model.py  # user profiles table
+│   │   ├── team_model.py     # teams and team members tables, default teams
+│   │   ├── report_model.py   # reports table
+│   │   ├── session_model.py  # sessions table
+│   │   └── preference_model.py # user preferences table
 │   ├── schemas
-│   │   └── user_schema.py # user data validation
+│   │   ├── user_schema.py    # user data validation
+│   │   ├── profile_schema.py # profile data validation
+│   │   ├── team_schema.py    # team data validation
+│   │   ├── report_schema.py  # report request validation
+│   │   └── session_schema.py # sign-in and preferences validation
 │   ├── storage
 │   │   └── profile_pics   # store profile pictures
 │   ├── utils

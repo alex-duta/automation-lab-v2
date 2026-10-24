@@ -1,4 +1,4 @@
-import { use, useEffect } from "react";
+import { useEffect } from "react";
 import WidgetCard from "../components/WidgetCard";
 
 // Home page displaying available widgets for automation
@@ -45,6 +45,38 @@ export default function Home() {
           features={["Overlapping elements", "Scrollable results"]}
         />
 
+        <WidgetCard
+          title="Edit User"
+          description="Edit the permissions, notifications, language and bio of a user."
+          link="/edit-user"
+          features={["Check boxes", "Radio buttons", "Keys (Enter, Ctrl+A)", "Rich text editor in an iframe",
+            "Browser form validation", "Options whose value differs from their text", "User kept in the URL"]}
+        />
+
+        <WidgetCard
+          title="Team Board"
+          description="Move users between teams and rename the teams."
+          link="/team-board"
+          features={["Drag and drop (HTML5)", "Details on hover", "Double-click to rename", "Right-click menu",
+            "Web components with shadow DOM", "Browser storage (highlights)"]}
+        />
+
+        <WidgetCard
+          title="Export & Reports"
+          description="Download the users as CSV and generate reports."
+          link="/user-reports"
+          features={["File download (CSV)", "Report whose status changes over time", "Text and attributes to wait for",
+            "Printable view in a new tab", "Page title and URL"]}
+        />
+
+        <WidgetCard
+          title="Session & Preferences"
+          description="Sign in as a user and choose their theme and date format."
+          link="/account"
+          features={["HTTP-only session cookie", "Preferences of the signed-in user", "E-mail remembered in a cookie",
+            "Tabs in the browser history (back, forward)", "Reload keeps the state", "Theme as an attribute"]}
+        />
+
         {/* Add more widgets here if needed */}
       </div>
     </div>
@@ -71,5 +103,7 @@ const styles = {
     flexWrap: "wrap",           // allows multiple rows if screen is small
     justifyContent: "center",   // center widgets horizontally
     gap: "30px",                // space between widgets
+    maxWidth: "1140px",         // at most four widgets per row; the next ones go to a new row
+    margin: "0 auto",
   },
 };

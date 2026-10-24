@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import users
-from app.utils.database import create_tables
+from sqlmodel import Session
+from app.api import profiles, reports, sessions, teams, users
+from app.models.team_model import create_default_teams
+from app.utils.database import create_tables, engine
 
 # -----------------------------------------
 # Instructions to run backend locally:
@@ -12,10 +14,12 @@ from app.utils.database import create_tables
 # local run: uvicorn app.main:app --reload --port 8000
 # -----------------------------------------
 
-# Create the database tables when the application starts
+# Create the database tables and the default teams when the application starts
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
+    with Session(engine) as session:
+        create_default_teams(session)
     yield
 
 # Create FastAPI instance
@@ -39,3 +43,7 @@ app.add_middleware(
 
 # Routes registration
 app.include_router(users.router)
+app.include_router(profiles.router)
+app.include_router(teams.router)
+app.include_router(reports.router)
+app.include_router(sessions.router)

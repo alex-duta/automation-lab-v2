@@ -5,6 +5,7 @@ import os
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, func, or_, select
+from app.models.team_model import create_default_teams
 from app.models.user_model import UserRecord
 from app.schemas.user_schema import UserCreate
 from app.utils.database import get_session
@@ -14,6 +15,36 @@ router = APIRouter()
 
 # Directory for storing profile pictures
 PROFILE_DIR = "app/storage/profile_pics"
+
+# Return the user, or raise 404 (also used by the profile and team endpoints)
+def find_user(session, user_id):
+    user = session.exec(select(UserRecord).where(UserRecord.id == user_id)).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+# Conditions of the user filters (also used by the export and the reports)
+def user_filters(search=None, role=None, status=None):
+    conditions = []
+
+    #  SEARCH FILTER: the term anywhere in the name or the email, ignoring case
+    #  (strpos and not LIKE, where _ and % in the term would be wildcards)
+    if search:
+        search_lower = search.lower()
+        conditions.append(or_(
+            func.strpos(func.lower(UserRecord.name), search_lower) > 0,
+            func.strpos(func.lower(UserRecord.email), search_lower) > 0,
+        ))
+
+    #  ROLE FILTER
+    if role:
+        conditions.append(UserRecord.role == role)
+
+    #  STATUS FILTER
+    if status:
+        conditions.append(UserRecord.status == status)
+
+    return conditions
 
 # -------------------------
 # POST /users - Create User
@@ -55,9 +86,7 @@ def create_user(user: UserCreate, session: Session = Depends(get_session)):
 @router.post("/users/{user_id}/upload-picture")
 def upload_picture(user_id: str, file: UploadFile = File(...), session: Session = Depends(get_session)):
     # Find user
-    user = session.exec(select(UserRecord).where(UserRecord.id == user_id)).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = find_user(session, user_id)
 
     # Ensure storage folder exists
     os.makedirs(PROFILE_DIR, exist_ok=True)
@@ -95,24 +124,7 @@ def list_users(
     size: int = Query(10, ge=1),
     session: Session = Depends(get_session),
     ):
-    conditions = []
-
-    #  SEARCH FILTER: the term anywhere in the name or the email, ignoring case
-    #  (strpos and not LIKE, where _ and % in the term would be wildcards)
-    if search:
-        search_lower = search.lower()
-        conditions.append(or_(
-            func.strpos(func.lower(UserRecord.name), search_lower) > 0,
-            func.strpos(func.lower(UserRecord.email), search_lower) > 0,
-        ))
-
-    #  ROLE FILTER
-    if role:
-        conditions.append(UserRecord.role == role)
-
-    #  STATUS FILTER
-    if status:
-        conditions.append(UserRecord.status == status)
+    conditions = user_filters(search, role, status)
 
     #  PAGINATION: total, page, size, items, in the order of creation
     total = session.exec(select(func.count()).select_from(UserRecord).where(*conditions)).one()
@@ -134,13 +146,17 @@ def list_users(
 
 # ---------------------------------------------------
 # POST /reset - Reset Data
-# Empties the user list and deletes the uploaded profile pictures, so that a run
-# of a test suite starts from the same state every time.
+# Empties the user list, the user profiles and preferences, the teams, the reports and the sessions, creates the default teams again
+# and deletes the uploaded profile pictures, so that a run of a test suite starts from the
+# same state every time.
 # ---------------------------------------------------
 @router.post("/reset")
 def reset_data(session: Session = Depends(get_session)):
-    session.connection().execute(text("TRUNCATE TABLE users RESTART IDENTITY"))
+    session.connection().execute(text(
+        "TRUNCATE TABLE sessions, user_preferences, reports, team_members, teams, user_profiles, users RESTART IDENTITY"
+    ))
     session.commit()
+    create_default_teams(session)
 
     # Delete the uploaded profile pictures
     if os.path.isdir(PROFILE_DIR):
