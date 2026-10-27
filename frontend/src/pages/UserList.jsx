@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import BackButton from "../components/BackButton";
 import { API_BASE } from "../config/config";
 
@@ -21,7 +21,12 @@ export default function UserList() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    // The number of the latest request. Each key typed in the search sends a request, and the backend answers them
+    // concurrently, so an earlier request can end after a later one: only the response of the latest request is shown.
+    const latestRequest = useRef(0);
+
     const fetchUsers = async () => {
+        const request = ++latestRequest.current;
         setLoading(true);
         setError("");
 
@@ -37,15 +42,17 @@ export default function UserList() {
 
             const res = await fetch(`${API_BASE}/users?${params.toString()}`);
             const data = await res.json();
+            if (request !== latestRequest.current) return; // a later request was sent meanwhile
 
             setUsers(data.items || []);
             setTotal(data.total || 0);
 
         } catch (err) {
+            if (request !== latestRequest.current) return;
             console.error(err);
             setError("Failed to load users.");
         } finally {
-            setLoading(false);
+            if (request === latestRequest.current) setLoading(false);
         }
     };
 

@@ -166,14 +166,16 @@ Expected: both return 404, with the detail `User not found`.
 ### Team Board
 
 **TA16 `test_move_user_between_teams`**
-1. Create a user.
+1. Create a user and send `GET /teams`.
 2. Send `PUT /users/{user_id}/team` with team 1, then `GET /teams`.
 3. Send `PUT /users/{user_id}/team` with team 2, then `GET /teams`.
 4. Send `PUT /users/{user_id}/team` with team 2 again, then `GET /teams`.
 
-Expected: every `PUT` returns 200 with the user id and the team id. After step 2 the user is the last member of
-team 1; after step 3 the last member of team 2 and not a member of team 1; after step 4 still a member of team 2,
-once.
+Expected: every `PUT` returns 200 with the user id and the team id. After step 2 the user is a member of team 1 and
+comes after every member that team 1 had in step 1; after step 3 the user is a member of team 2 and comes after every
+member that team 2 had in step 2, and is not a member of team 1; after step 4 still a member of team 2, once. Tests
+that run at the same time may put their own users in the teams, after the user or before, so the position is checked
+only against the members that the team had before the move.
 
 **TA17 `test_remove_user_from_team`**
 1. Create a user and put them in team 1.
