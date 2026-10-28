@@ -207,10 +207,14 @@ lines with the e-mails of the two admin users.
 **TA20 `test_report_becomes_ready`**
 1. Create three users with a prefix.
 2. Send `POST /reports` with the type `by_role`, the search `<prefix>` and the delay 1.
-3. Send `GET /reports/{report_id}` every 200 ms until the status is `ready`, for at most 10 s.
+3. Wait until `GET /reports/{report_id}` returns the status `ready`, for at most 10 s, sending it again at the
+   polling interval of the suite (50 ms).
+4. Send `GET /reports/{report_id}`.
 
 Expected: step 2 returns 200 with the status `queued` and no result. In step 3 the status becomes `ready` within
-10 s, the progress is 100, and the result is `admin` 2, `viewer` 1, in this order.
+10 s; step 4 returns the status `ready`, the progress 100, and the result `admin` 2, `viewer` 1, in this order. The
+number of requests of step 3 depends on how fast the backend answers, so a suite that records its steps records the
+wait as one step, not each request.
 
 **TA21 `test_report_errors`**
 1. Send `POST /reports` with the type `by_age`.
