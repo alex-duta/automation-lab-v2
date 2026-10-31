@@ -101,6 +101,8 @@ Install the following dependencies:
 
    - Note: Initial Docker execution may take additional time to build the image and download dependencies. This is a one-time cost; later runs benefit from Docker’s caching mechanism.
 
+   - The frontend image can also be built with the address of the API as a build argument, which then replaces `config.js`: `docker build --build-arg API_BASE=http://localhost:8000 frontend`. The test suites of agnostest build a tagged version of the app this way, straight from this repository (`https://github.com/alex-duta/automation-lab-v2.git#v2.0.0:frontend`).
+
 ### Access the application:
    - **Frontend**: http://localhost:3000
    - **Backend API**: http://localhost:8000
@@ -244,6 +246,7 @@ Once the backend is running, access the interactive API documentation at:
 
 - User data is stored in the PostgreSQL database `automation_lab`, in the Docker volume `automation-lab-v2_database-data`; the backend creates its tables at startup. `POST /reset` empties them, and `docker compose down -v` deletes the volume
 - Profile pictures are stored in `backend/app/storage/profile_pics/`
+- Versions are git tags that match `version` in `CITATION.cff`, e.g. `v2.0.0`. The test suites of agnostest build the app from a tag, so a change reaches them with the next one: raise the version in `CITATION.cff`, then tag the commit
 - The session cookie of the backend reaches the frontend because both run on the same host (`localhost`, ports 3000 and 8000): cookies do not depend on the port. The frontend sends its session requests with credentials, and the backend allows them for the origins in `main.py`
 - The project uses:
    - **ESLint** for JavaScript/JSX, usage:

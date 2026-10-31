@@ -16,6 +16,11 @@ RUN npm ci
 # Copy the rest of the source code
 COPY . .
 
+# The address of the API, when given at build time (--build-arg API_BASE=http://localhost:8000); without it the
+# build uses src/config/config.js as it is, which run_frontend_backend writes
+ARG API_BASE
+RUN if [ -n "$API_BASE" ]; then echo "export const API_BASE = \"$API_BASE\";" > src/config/config.js; fi
+
 # Build the production-ready app
 RUN npm run build
 
